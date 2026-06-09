@@ -5626,3 +5626,69 @@
     display: none;
   }
 }
+
+/* ============================================
+   模型配置面板 — mc-* (model config)
+   ============================================ */
+.mc-hint {
+  padding: 10px 12px;
+  background: var(--amber-dim, rgba(201, 169, 92, 0.1));
+  border: 1px solid rgba(201, 169, 92, 0.3);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-dim, #8b949e);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.mc-card {
+  background: var(--bg-elevated, #161b22);
+  border: 1px solid var(--border, #30363d);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.mc-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent, #e8954a);
+  margin-bottom: 4px;
+  font-family: var(--font-display, inherit);
+}
+
+.mc-card-desc {
+  font-size: 11px;
+  color: var(--text-muted, #6e7681);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.mc-quick-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border, #30363d);
+}
+
+.pc-btn.tiny {
+  padding: 3px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid var(--border, #30363d);
+  background: var(--bg-hover, #21262d);
+  color: var(--text-dim, #8b949e);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.pc-btn.tiny:hover {
+  border-color: var(--accent, #e8954a);
+  color: var(--accent, #e8954a);
+  background: var(--accent-dim, rgba(232, 149, 74, 0.12));
+}

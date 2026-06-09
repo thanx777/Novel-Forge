@@ -1,0 +1,76 @@
+/* ============================================
+   Novel Forge — 排版系统
+   ============================================ */
+
+/* —— 衬线标题字体 — 文学气质 —— */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&display=swap');
+
+/* —— 基础排版 —— */
+body {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* —— 标题层级 —— */
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+/* —— 工具提示 —— */
+[title] {
+  position: relative;
+}
+
+/* —— 选中文本颜色 —— */
+::selection {
+  background: var(--accent-dim);
+  color: var(--text);
+}
+
+/* —— 滚动条 —— */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* —— 聚焦环 —— */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* —— 代码/终端 —— */
+code, pre, .terminal-panel, .logs-body, .file-preview-content {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* —— 小号元数据文字 —— */
+.meta-text {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

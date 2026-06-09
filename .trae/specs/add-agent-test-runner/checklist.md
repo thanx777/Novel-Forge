@@ -1,0 +1,18 @@
+- [x] TerminalExecutor 能执行 shell 命令并返回 stdout/stderr/exit code
+- [x] CodeExecutor 能运行 Python 和 Node.js 代码片段
+- [x] ApiTester 能发送 HTTP 请求并返回响应
+- [x] PlaywrightRunner 能执行 Web 测试（可选，未安装时返回提示）
+- [x] 危险命令被安全过滤拒绝
+- [x] `[TEST:CMD: ...]` 标记被正确解析和执行
+- [x] `[TEST:CODE:python: ...]` 标记被正确解析和执行
+- [x] `[TEST:API:GET: ...]` 标记被正确解析和执行
+- [x] `[TEST:PW: ...]` 标记被正确解析和执行
+- [x] 测试结果通过 SSE 日志流发送到前端
+- [x] 测试结果被注入触发测试节点的后续上下文
+- [x] Reviewer 系统提示词包含测试指令说明
+- [x] Manager 系统提示词包含测试指令说明
+- [x] 前端日志面板能正确展示测试结果（特殊样式）
+- [x] 测试超时（60秒）能正确终止并返回错误
+- [x] Playwright 未安装时返回友好提示而非崩溃
+- [x] 3 个测试 Skill 文件已创建
+- [x] requirements.txt 已更新

@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+sse-starlette
+openai
+pydantic
+httpx
+# playwright  # optional: pip install playwright && playwright install chromium

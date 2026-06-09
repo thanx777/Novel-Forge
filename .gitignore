@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.sw?
+*.suo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local config (contains API keys)
+backend/config.json
+
+# Workspace runtime data
+backend/workspace/run_*/
+backend/workspace/state.json
+
+# Backup files
+*.bak
+*.refactor*

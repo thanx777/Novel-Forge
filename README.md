@@ -13,6 +13,10 @@
 - **三模式适配**：standard / compatible / full，适配不同能力模型
 - **60+ 内置角色**：工程/设计/产品/测试/专业领域，.md 格式可扩展
 - **40+ API 端点**：任务管理 / 预设CRUD / 文件操作 / 终端测试 / SSE 实时日志
+- **项目中心（Project Center）**：以项目为主体，SQLite 元数据 + 文件系统大内容，章节/记忆/大纲实时同步
+- **项目模型预设持久化**：每个项目保存三角色（manager/worker/reviewer）API 配置，启动阶段自动读取，无需每次输入
+- **AI 对话助理**：项目上下文感知，读取大纲/章节/记忆后生成分析建议，引擎暂停时仍可使用
+- **manual 大纲审核**：大纲阶段结束后暂停，人工确认后进入写作阶段
 
 ## 快速开始
 
@@ -170,6 +174,30 @@ run_xxx/memory/
 
 ## API 端点
 
+### 项目中心 v2 (`/api/v2/projects/*`)
+
+| 类别 | 端点 | 方法 | 说明 |
+|------|------|------|------|
+| 项目 | `/api/v2/projects` | GET | 项目列表 |
+| | `/api/v2/projects` | POST | 创建项目 |
+| | `/api/v2/projects/{name}` | GET | 项目详情 |
+| | `/api/v2/projects/{name}` | DELETE | 删除项目 |
+| 模型预设 | `/api/v2/projects/{name}/presets` | GET | 读取三角色 API 预设 |
+| | `/api/v2/projects/{name}/presets` | PUT | 保存/部分更新三角色预设 |
+| 章节 | `/api/v2/projects/{name}/chapters` | GET | 章节列表 |
+| | `/api/v2/projects/{name}/chapters/{idx}` | GET | 读取章节内容 |
+| | `/api/v2/projects/{name}/chapters/{idx}` | PATCH | 更新章节内容 |
+| 记忆 | `/api/v2/projects/{name}/memory` | GET | 记忆列表 |
+| | `/api/v2/projects/{name}/memory` | POST | 新增记忆 |
+| 大纲审核 | `/api/v2/projects/{name}/confirm-outline` | POST | 人工确认大纲通过 |
+| | `/api/v2/projects/{name}/reject-outline` | POST | 人工拒绝大纲（带修改意见） |
+| 阶段执行 | `/api/v2/projects/run-stage` | POST | 启动阶段(SSE) outline/writing/polish |
+| | `/api/v2/projects/{name}/stop` | POST | 停止当前阶段 |
+| AI 对话 | `/api/v2/projects/{name}/assistant-chat` | POST | 项目上下文感知对话 |
+| 文件 | `/api/v2/projects/{name}/files/{path}` | GET/POST/DELETE | 项目内文件操作 |
+
+### 传统 v1 端点
+
 | 类别 | 端点 | 方法 | 说明 |
 |------|------|------|------|
 | 任务 | `/api/run-task` | POST | 启动任务(SSE) |
@@ -192,30 +220,23 @@ run_xxx/memory/
 omni-agent-hub/
 ├── backend/
 │   ├── executor.py              # 核心引擎 (GraphExecutor)
-│   ├── main.py                  # FastAPI 入口 (40+ 端点)
+│   ├── main.py                  # FastAPI 入口 (v1 + v2 共40+端点)
+│   ├── project_db.py            # 项目元数据数据库 (SQLite + JSON)
+│   ├── project_executor.py      # 项目级执行器 (ProjectExecutor)
+│   ├── assistant.py             # 项目上下文感知 AI 对话助理
+│   ├── migration.py             # 旧 run_* 目录迁移到新项目结构
 │   ├── agent_loader.py          # 角色 .md 加载器
 │   ├── skill_loader.py          # 技能加载器
 │   ├── test_runner.py           # 测试执行引擎
 │   ├── memory_manager.py        # 记忆管理器
 │   ├── hallucination_guard.py   # 幻觉守卫
 │   ├── genre_data/              # 体裁数据
-│   │   ├── taxonomy.py          # 追读力分类学
-│   │   ├── genre_profiles.py    # 14体裁裁决规则
-│   │   ├── inkos_data.py        # 33维审计体系
-│   │   ├── writing_guides.py    # Anti-AI写作规范
-│   │   └── detect.py            # 体裁自动检测
 │   ├── agents/                  # 60+ 角色 .md
-│   │   ├── engineering/         # 工程类
-│   │   ├── design/              # 设计类
-│   │   ├── product/             # 产品类
-│   │   ├── specialized/         # 专业类
-│   │   ├── testing/             # 测试类
-│   │   └── strategy/            # 策略类
 │   ├── workspace/               # 文件输出 + 任务文件夹
-│   └── projects/                # 项目保存
+│   └── projects/                # 项目保存 (SQLite + 内容文件)
 ├── frontend/
 │   └── src/
-│       ├── App.jsx              # 入口组件
+│       ├── App.jsx              # 入口组件 (Project Center)
 │       ├── App.css              # 全局样式
 │       ├── translations.js      # 中/英 i18n
 │       ├── styles/              # 设计系统
@@ -223,8 +244,10 @@ omni-agent-hub/
 │       │   ├── usePreset.js     # 预设管理
 │       │   ├── useTask.js       # 任务执行
 │       │   ├── useNovelTask.js  # 小说任务
-│       │   └── useSkill.js      # 技能管理
+│       │   ├── useSkill.js      # 技能管理
+│       │   └── useProjectV2.js  # 项目中心 v2
 │       └── components/
+│           ├── ProjectCenter.jsx # 项目中心 (主界面)
 │           ├── Workbench.jsx    # 核心工作区
 │           ├── Sidebar.jsx      # 侧边栏
 │           ├── TaskDetailModal.jsx # 任务编辑

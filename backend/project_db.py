@@ -99,6 +99,9 @@ class ProjectDB:
         ai_preset TEXT DEFAULT '',
         execution_mode TEXT DEFAULT 'lite',
         outline_review_mode TEXT DEFAULT 'auto',  -- auto | manual
+        manager_preset TEXT DEFAULT '',
+        worker_preset TEXT DEFAULT '',
+        reviewer_preset TEXT DEFAULT '',
         description TEXT DEFAULT '',
         created_at TEXT DEFAULT '',
         updated_at TEXT DEFAULT ''
@@ -202,15 +205,26 @@ class ProjectDB:
     # ---------------- 项目 CRUD ----------------
 
     def get_project(self) -> Dict:
-        """获取项目信息"""
+        """获取项目信息（manager/worker/reviewer_preset 自动解析 JSON）"""
         cur = self.conn.execute("SELECT * FROM projects WHERE name=?", (self.project_name,))
-        return self._row_to_dict(cur.fetchone()) or {}
+        info = self._row_to_dict(cur.fetchone()) or {}
+        for k in ("manager_preset", "worker_preset", "reviewer_preset"):
+            v = info.get(k)
+            if isinstance(v, str) and v.strip():
+                try: info[k] = json.loads(v)
+                except Exception: info[k] = {}
+            else:
+                info[k] = {}
+        return info
 
     def update_project(self, **kwargs) -> bool:
-        """更新项目字段"""
+        """更新项目字段（dict 类型字段会自动 JSON 序列化）"""
         if not kwargs:
             return False
         kwargs["updated_at"] = self._now()
+        for k in ("manager_preset", "worker_preset", "reviewer_preset"):
+            if k in kwargs and isinstance(kwargs[k], (dict, list)):
+                kwargs[k] = json.dumps(kwargs[k], ensure_ascii=False)
         fields = ", ".join(f"{k}=?" for k in kwargs)
         values = list(kwargs.values()) + [self.project_name]
         try:
@@ -229,6 +243,30 @@ class ProjectDB:
         """获取当前阶段"""
         project = self.get_project()
         return project.get("current_stage", "outline") or "outline"
+
+    def get_presets(self) -> Dict[str, Dict]:
+        """获取项目的三角色预设：{manager, worker, reviewer}"""
+        info = self.get_project()
+        return {
+            "manager": info.get("manager_preset") or {},
+            "worker": info.get("worker_preset") or {},
+            "reviewer": info.get("reviewer_preset") or {},
+        }
+
+    def set_presets(self, manager: Optional[Dict] = None,
+                    worker: Optional[Dict] = None,
+                    reviewer: Optional[Dict] = None) -> bool:
+        """设置项目的三角色预设"""
+        data = {}
+        if manager is not None:
+            data["manager_preset"] = json.dumps(manager, ensure_ascii=False) if manager else ""
+        if worker is not None:
+            data["worker_preset"] = json.dumps(worker, ensure_ascii=False) if worker else ""
+        if reviewer is not None:
+            data["reviewer_preset"] = json.dumps(reviewer, ensure_ascii=False) if reviewer else ""
+        if not data:
+            return True
+        return self.update_project(**data)
 
     # ---------------- 章节 CRUD ----------------
 

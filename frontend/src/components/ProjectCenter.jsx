@@ -1,11 +1,11 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 /**
  * ProjectCenter — 项目中心首页，替换原来的 NovelWorkspace。
  * 功能：
  * 1. 左侧：项目列表 + 新建 / 删除
  * 2. 中间：当前项目详情（章节列表、记忆、大纲、阶段控制）
- * 3. 右侧：章节编辑器 / 大纲编辑
+ * 3. 右侧：章节编辑器 / 大纲编辑 / 模型配置
  *
  * 简化版：用最小改动，不引入外部库。
  */
@@ -19,6 +19,7 @@ export default function ProjectCenter({
     runStage, confirmOutline, rejectOutline, stopTask, isRunning,
     updateChapter, addMemory, assistantChat,
     putFile, getFile, migrateOld,
+    loadProjectPresets, saveProjectPresets,
   } = projectV2
 
   // 创建项目表单
@@ -30,7 +31,10 @@ export default function ProjectCenter({
 
   // 当前所选章节 / 面板
   const [selectedChapterIndex, setSelectedChapterIndex] = useState(null)
-  const [rightPanel, setRightPanel] = useState("chapter") // chapter | outline | characters | assistant
+  const [rightPanel, setRightPanel] = useState("chapter") // chapter | outline | characters | assistant | modelConfig
+
+  // 项目模型预设（三角色）
+  const [projectPresets, setProjectPresets] = useState({ manager: {}, worker: {}, reviewer: {} })
 
   // 编辑内容
   const [chapterDraft, setChapterDraft] = useState("")
@@ -75,6 +79,15 @@ export default function ProjectCenter({
     setRightPanel("chapter")
     await loadProject(name)
   }
+
+  // 项目切换时，加载模型预设
+  useEffect(() => {
+    if (!activeProject?.name) return
+    ;(async () => {
+      const data = await loadProjectPresets(activeProject.name)
+      setProjectPresets(data || { manager: {}, worker: {}, reviewer: {} })
+    })()
+  }, [activeProject?.name])
 
   // ============ 选择章节 ============
   const handleSelectChapter = async (chap) => {
@@ -249,6 +262,7 @@ export default function ProjectCenter({
                 <button className="pc-btn small" onClick={handleOpenOutline}>📋 大纲</button>
                 <button className="pc-btn small" onClick={handleOpenCharacters}>🧑 人物</button>
                 <button className="pc-btn small" onClick={() => setRightPanel("assistant")}>🤖 AI 助理</button>
+                <button className="pc-btn small" onClick={() => setRightPanel("modelConfig")}>⚙️ 模型配置</button>
               </div>
 
               <div className="pc-section-title" style={{ marginTop: 12 }}>🧠 记忆 ({activeProject.memory?.length || 0})</div>
@@ -388,6 +402,117 @@ export default function ProjectCenter({
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeProject && rightPanel === "modelConfig" && (
+            <div className="editor-wrap">
+              <div className="editor-header">
+                <span>⚙️ 项目模型配置</span>
+                <button
+                  className="pc-btn primary small"
+                  onClick={() => saveProjectPresets(activeProject.name, projectPresets)}
+                >
+                  保存到项目
+                </button>
+              </div>
+              <div className="editor-body">
+                <div className="mc-hint">
+                  你可以为每个角色（经理/作者/审稿）指定不同的模型配置。保存后下次运行该项目时将自动使用这些配置。
+                </div>
+                {["manager", "worker", "reviewer"].map((role) => {
+                  const roleLabels = { manager: "🎯 经理角色", worker: "⚡ 作者角色", reviewer: "🔍 审稿角色" }
+                  const roleDescs = {
+                    manager: "负责总体规划、章节结构、质量把控",
+                    worker: "负责实际撰写章节正文",
+                    reviewer: "负责审查章节内容，提出修改意见",
+                  }
+                  const p = projectPresets[role] || {}
+                  const setField = (key, value) => {
+                    setProjectPresets((prev) => ({
+                      ...prev,
+                      [role]: { ...(prev[role] || {}), [key]: value },
+                    }))
+                  }
+                  return (
+                    <div className="mc-card" key={role}>
+                      <div className="mc-card-title">{roleLabels[role]}</div>
+                      <div className="mc-card-desc">{roleDescs[role]}</div>
+                      <div className="editor-field">
+                        <label>预设名称</label>
+                        <input
+                          value={p.name || ""}
+                          onChange={(e) => setField("name", e.target.value)}
+                          placeholder="例：my-gpt"
+                        />
+                      </div>
+                      <div className="editor-field">
+                        <label>Base URL</label>
+                        <input
+                          value={p.base_url || ""}
+                          onChange={(e) => setField("base_url", e.target.value)}
+                          placeholder="https://api.example.com/v1"
+                        />
+                      </div>
+                      <div className="editor-field">
+                        <label>API Key</label>
+                        <input
+                          type="password"
+                          value={p.api_key || ""}
+                          onChange={(e) => setField("api_key", e.target.value)}
+                          placeholder="sk-..."
+                        />
+                      </div>
+                      <div className="editor-field">
+                        <label>模型名称</label>
+                        <input
+                          value={p.model || ""}
+                          onChange={(e) => setField("model", e.target.value)}
+                          placeholder="gpt-4o-mini / claude-sonnet-4-20250514 / 其它模型名"
+                        />
+                      </div>
+                      <div className="editor-field">
+                        <label>API Format</label>
+                        <select
+                          value={p.api_format || "openai"}
+                          onChange={(e) => setField("api_format", e.target.value)}
+                        >
+                          <option value="openai">OpenAI 兼容</option>
+                          <option value="claude">Anthropic Claude</option>
+                        </select>
+                      </div>
+                      <div className="mc-quick-row">
+                        <span style={{ opacity: 0.7, fontSize: 12 }}>快速填充：</span>
+                        {presets && presets.length > 0 ? (
+                          presets.slice(0, 5).map((ps, i) => (
+                            <button
+                              key={i}
+                              className="pc-btn tiny"
+                              onClick={() => {
+                                setProjectPresets((prev) => ({
+                                  ...prev,
+                                  [role]: {
+                                    name: ps.name || "",
+                                    api_key: ps.api_key || "",
+                                    base_url: ps.base_url || "",
+                                    model: ps.model || "",
+                                    api_format: ps.api_format || "openai",
+                                    chat_template_kwargs: ps.chat_template_kwargs || null,
+                                  },
+                                }))
+                              }}
+                            >
+                              {ps.name}
+                            </button>
+                          ))
+                        ) : (
+                          <span style={{ fontSize: 12, opacity: 0.5 }}>（当前无全局预设）</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}

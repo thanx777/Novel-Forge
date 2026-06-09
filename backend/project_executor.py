@@ -133,7 +133,6 @@ class ProjectExecutor:
     def __init__(self, project_name: str, presets: List[dict],
                  total_chapters: int = 100, genre: str = "", title: str = ""):
         self.project_name = project_name
-        self.presets = presets
         self.total_chapters = total_chapters
         self.genre = genre
 
@@ -150,6 +149,21 @@ class ProjectExecutor:
 
         # 获取 DB 引用
         self.db = ProjectDB(project_name)
+
+        # 如果传入的 presets 为空，尝试从项目数据库读取保存的三角色预设
+        if not presets:
+            try:
+                project_presets = self.db.get_presets()
+                preset_list = []
+                for role in ("manager", "worker", "reviewer"):
+                    p = project_presets.get(role) or {}
+                    if p and isinstance(p, dict) and p.get("api_key"):
+                        preset_list.append(p)
+                self.presets = preset_list
+            except Exception:
+                self.presets = []
+        else:
+            self.presets = presets
 
         # 当前运行 executor 引用（用于 stop）
         self._executor: Optional[GraphExecutor] = None

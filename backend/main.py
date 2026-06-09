@@ -814,6 +814,12 @@ class _ProjectRunStage(BaseModel):
     presets: List[dict] = []
 
 
+class _ProjectPresets(BaseModel):
+    manager: Optional[dict] = None
+    worker: Optional[dict] = None
+    reviewer: Optional[dict] = None
+
+
 class _AssistantChat(BaseModel):
     project_name: str
     message: str = ""
@@ -863,6 +869,35 @@ def v2_get_project(project_name: str):
         data = db.to_dict()
         db.close()
         return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v2/projects/{project_name}/presets")
+def v2_get_project_presets(project_name: str):
+    """读取项目的三角色模型预设。"""
+    try:
+        db = ProjectDB(project_name)
+        presets = db.get_presets()
+        db.close()
+        return {"presets": presets}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v2/projects/{project_name}/presets")
+def v2_update_project_presets(project_name: str, body: _ProjectPresets):
+    """保存项目的三角色模型预设（部分更新，只传要改的角色）。"""
+    try:
+        db = ProjectDB(project_name)
+        ok = db.set_presets(
+            manager=body.manager,
+            worker=body.worker,
+            reviewer=body.reviewer,
+        )
+        updated = db.get_presets()
+        db.close()
+        return {"success": ok, "presets": updated}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -987,7 +1022,26 @@ async def _v2_run_stage_stream(req: _ProjectRunStage):
             except Exception:
                 pass
 
-        executor = ProjectExecutor(req.project_name, req.presets or [])
+        # 解析 presets：
+        # 优先用请求里的 presets；如果为空，尝试从项目数据库读取
+        presets = list(req.presets or [])
+        if not presets:
+            try:
+                db = ProjectDB(req.project_name)
+                project_presets = db.get_presets()
+                db.close()
+                # 把 DB 里存的是 {manager:{...} 形式，转换为 executor 需要的 list[dict]
+                preset_list = []
+                for role in ("manager", "worker", "reviewer"):
+                    p = project_presets.get(role) or {}
+                    if p and isinstance(p, dict) and p.get("api_key"):
+                        preset_list.append(p)
+                if preset_list:
+                    presets = preset_list
+            except Exception:
+                pass
+
+        executor = ProjectExecutor(req.project_name, presets)
         q = asyncio.Queue()
 
         def q_yield(msg):

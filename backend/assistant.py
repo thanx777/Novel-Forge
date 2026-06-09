@@ -179,10 +179,11 @@ class ProjectAssistant:
         except Exception as e:
             text = f"(LLM 调用失败: {e})"
 
-        # 存一份对话历史
+        # 存一份对话历史（context 用当前阶段）
         db = ProjectDB(self.project_name)
-        db.add_chat("user", user_msg, "assistant")
-        db.add_chat("assistant", text, "assistant")
+        current_stage = db.get_project().get("current_stage", "outline")
+        db.add_chat("user", user_msg, current_stage)
+        db.add_chat("assistant", text, current_stage)
         db.close()
         return text
 

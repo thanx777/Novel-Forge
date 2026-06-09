@@ -84,7 +84,10 @@ export default function ProjectCenter({
     // 从 v2 API 拉取正文
     if (activeProject) {
       const content = await getFile(activeProject.name, `chapters/第${chap.chapter_index}章.txt`)
-      setChapterDraft(content || "")
+      // 只在文件存在时才更新草稿；不存在时不覆盖现有输入
+      if (content) {
+        setChapterDraft(content)
+      }
     }
     setRightPanel("chapter")
   }

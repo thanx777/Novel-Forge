@@ -205,6 +205,10 @@ export default function useProjectV2({ showNotification, presets = [], t }) {
         }),
       })
 
+      if (!resp.ok) {
+        const err = await resp.text()
+        throw new Error(`HTTP ${resp.status}: ${err}`)
+      }
       const reader = resp.body?.getReader()
       if (!reader) throw new Error("No stream reader")
       const decoder = new TextDecoder()
@@ -217,7 +221,7 @@ export default function useProjectV2({ showNotification, presets = [], t }) {
         for (const line of chunk.split("\n")) {
           if (line.startsWith("data: ")) {
             try {
-              const data = JSON.parse(line.replace("data: ", ""))
+              const data = JSON.parse(line.slice(6))
               receivedEvents.push(data)
               if (data.status === "finished" || data.status === "done") {
                 showNotification && showNotification("阶段完成", "success")
@@ -225,7 +229,9 @@ export default function useProjectV2({ showNotification, presets = [], t }) {
               if (data.status === "error") {
                 showNotification && showNotification(data.message || "出错", "error")
               }
-            } catch (e) {}
+            } catch (e) {
+              // 忽略格式错误的数据行
+            }
           }
         }
       }

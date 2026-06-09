@@ -102,6 +102,12 @@ export default function Workbench({
           stage_timeout_seconds: 600, execution_mode: mode, outline_review_mode: outlineReviewMode,
         })
       })
+      if (!response.ok) {
+        const err = await response.text()
+        showNotification(t("taskError") + `: HTTP ${response.status}`, "error")
+        setIsRunning(false)
+        return
+      }
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       while (true) {
@@ -112,7 +118,20 @@ export default function Workbench({
             try {
               const data = JSON.parse(line.replace("data: ", ""))
               setLogs(prev => [...prev, data])
-              if (data.task_folder) { setActiveTaskFolder(data.task_folder); setShowNewTask(false); setTimeout(loadFiles, 1000) }
+              if (data.task_folder) {
+                setActiveTaskFolder(data.task_folder)
+                setShowNewTask(false)
+                // 立即加载一次，然后最多重试 3 次，每次间隔 2 秒
+                let retries = 0
+                const loadWithRetry = () => {
+                  loadFiles()
+                  if (retries < 3) {
+                    retries++
+                    setTimeout(loadWithRetry, 2000)
+                  }
+                }
+                loadWithRetry()
+              }
               if (data.status === "done") { showNotification(t("taskCompleted"), "success"); setIsRunning(false); loadFiles(); loadTasks() }
               if (data.status === "paused") { showNotification(data.message || t("taskPaused"), "info"); setIsRunning(false); loadFiles(); loadTasks() }
               if (data.status === "error" && !data.node_id) { showNotification(data.message, "error"); setIsRunning(false) }
@@ -256,8 +275,8 @@ export default function Workbench({
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             {language === "zh" ? "新任务" : "New Task"}
           </button>
-          {activeTaskFolder && (
-            <button className="wb-btn wb-btn-stop" onClick={handleStopTask} disabled={!isRunning}>
+          {activeTaskFolder && isRunning && (
+            <button className="wb-btn wb-btn-stop" onClick={handleStopTask}>
               {language === "zh" ? "停止" : "Stop"}
             </button>
           )}
@@ -270,8 +289,8 @@ export default function Workbench({
           {isRunning && <span className="wb-timer">{"⏱"} {formatTime(elapsed)}</span>}
           <span className="wb-progress">{chapterCount}{totalChapters ? `/${totalChapters}` : ""} {language === "zh" ? "章" : "ch"}</span>
           <select value={executionMode} onChange={e => setExecutionMode(e.target.value)} className="wb-select">
-            <option value="lite">{language === "zh" ? "标准" : "Std"}</option>
-            <option value="pro">{language === "zh" ? "兼容" : "Cmp"}</option>
+            <option value="lite">{language === "zh" ? "精简" : "Lite"}</option>
+            <option value="pro">{language === "zh" ? "标准" : "Standard"}</option>
             <option value="pro_polish">{language === "zh" ? "完整" : "Full"}</option>
           </select>
           {activeTaskFolder && (
@@ -343,7 +362,7 @@ export default function Workbench({
                             <span className={`wb-task-status wb-status-${task.status}`}>
                               {task.status === "completed" ? t("done") : task.status === "in_progress" ? t("paused") : t("paused")}
                             </span>
-                            <span>{task.chapters_done}/{task.total_chapters}</span>
+                            <span>{task.chapters_done ?? 0}/{task.total_chapters ?? 0}</span>
                           </div>
                         </div>
                         <div className="wb-task-actions">
